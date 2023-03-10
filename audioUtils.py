@@ -28,7 +28,7 @@ def cut_song(song, step = 10000):
   y_split = librosa.effects.split(song, top_db=20)
   for i in y_split:
     segment = song[i[0]:i[1]]
-    for j in range(0, (len(segment)-int(step/2)), step):
+    for j in range(0, (len(segment)-step), step):
 
       song_pieces.append(segment[j:j+step])
   return song_pieces
@@ -41,8 +41,8 @@ def preprocessAudio(filePath, size = 10000, db = False):
   y,sr = librosa.load(filePath,sr=22050)
   song_pieces = cut_song(y, size)
   for song_piece in song_pieces:
-    
-    melspect = librosa.feature.melspectrogram(y = song_piece)
+    normalized_audio = (song_piece - np.mean(song_piece)) / np.std(song_piece)
+    melspect = librosa.feature.melspectrogr/ am(y = normalized_audio)
     if db:
         melspect = librosa.amplitude_to_db(melspect, ref=np.max)
     list_matrices.append(melspect)

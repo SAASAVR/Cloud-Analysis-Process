@@ -23,9 +23,18 @@ import matplotlib.pyplot as plt
 sns.set(style="white", palette=None)
 color_pal = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 color_cycle = cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
+class Config:
+
+    def __init__(self, size = 10000, sr = 22050, split = True, normalize = False):
+        self.size = size
+        self.sr = sr
+        self.split = split
+        self.normalize = normalize
+
 
 def cut_audio(audio, step = 10000, split = True):
   audio_pieces = []
+  # audio = np.array(librosa.effects.trim(audio, top_db=20))
   if split:
     y_split = librosa.effects.split(audio, top_db=20)
     for i in y_split:
@@ -45,12 +54,12 @@ def cut_audio(audio, step = 10000, split = True):
 
 
 
-def preprocessAudio(filePath, size = 10000, sr = 22050, db = False, normalize = False, split = True):
+def preprocessAudio(filePath, config = Config(), db = False):
   list_matrices = []
-  y,sr = librosa.load(filePath,sr=sr)
-  aduio_pieces = cut_audio(y, size, split)
+  y,sr = librosa.load(filePath,sr=config.sr)
+  aduio_pieces = cut_audio(y, config.size, config.split)
   for audio_piece in aduio_pieces:
-    if normalize:
+    if config.normalize:
       audio_piece = (audio_piece - np.mean(audio_piece)) / np.std(audio_piece)
     melspect = librosa.feature.melspectrogram(y = audio_piece)
     if db:
@@ -59,7 +68,7 @@ def preprocessAudio(filePath, size = 10000, sr = 22050, db = False, normalize = 
   return list_matrices
 
 
-def initBinaryModel(showplit = False, size = 10000, sr = 22050):
+def initBinaryModel(showplot = False, size = 10000, sr = 22050):
   # all tracks will be the X features and classification will be the target y
   all_tracks = []
   classification = []
@@ -72,7 +81,7 @@ def initBinaryModel(showplit = False, size = 10000, sr = 22050):
   nameIndex = []
 
 
-
+  configs = [Config(size = size, sr = sr, split = False, normalize=False), Config(size = size, sr = sr, normalize=False)]
   i = 0
   for foldername in os.listdir(directory):
     folder_path = os.path.join(directory, foldername)
@@ -80,17 +89,17 @@ def initBinaryModel(showplit = False, size = 10000, sr = 22050):
     # checking if it is a file
     #  if os.path.isfile(f):
     nameIndex.append(foldername)
+    print("Using config: ", configs[i].__dict__)
     for file in os.listdir(folder_path):
         file_path = os.path.join(folder_path, file)
         y,sr = librosa.load(file_path,sr=sr)
-        audio_pieces = cut_audio(y, step = size)
-        if showplit:
+        if showplot:
           pd.Series(y).plot(figsize=(10, 5),
                       lw=1,
                       title='Norm Audio Example',
                     color=color_pal[0])
           plt.show()
-        audio_piece = preprocessAudio(file_path)
+        audio_piece = preprocessAudio(file_path, config = configs[i])
         # for i in audio_piece:
         #    plot(i)
         all_tracks += audio_piece
@@ -146,7 +155,7 @@ def initBinaryModel(showplit = False, size = 10000, sr = 22050):
                 metrics=['accuracy'])
   # X_train = X_train.reshape(1, 128, 196, 1)
 
-  # history = model.fit(X_train, y_train, epochs=10, validation_data=(X_val, y_val))
+  history = model.fit(X_train, y_train, epochs=10, validation_data=(X_val, y_val))
   model.summary()
   return model
 
@@ -158,8 +167,8 @@ def resultofOutput(input):
   calls = tf.math.reduce_sum(calls).numpy()
   return input, calls
 
-def preprocessInputData(input):
-  input = preprocessAudio(file_path, split = False)
+def preprocessInputData(input, config = Config()):
+  input = preprocessAudio(file_path, config = config)
       
   input = np.array(input)
   input = np.reshape(input, (input.shape[0], input.shape[1],input.shape[2], 1))
@@ -169,11 +178,15 @@ def preprocessInputData(input):
 
 
 if __name__ == '__main__':
-  model = initBinaryModel()
+  size = 10000
+  sr = 22050
+  model = initBinaryModel(size = size, sr = sr)
   file_path = "hoot-46198.mp3"
+  config = Config(size = size, sr = sr, split = False, normalize = False)
+  input = preprocessInputData(file_path, config = config)
 
-  input = preprocessInputData(file_path)
   print("inputed ",file_path , ", size: " , input.shape)
+  print("Using config: ", config.__dict__)
 
   test = model.predict(input)
 
@@ -183,3 +196,5 @@ if __name__ == '__main__':
   print("# calls: ", calls)
 
   
+
+  tf.keras.backend.clear_session()

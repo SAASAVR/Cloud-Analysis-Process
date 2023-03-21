@@ -1,7 +1,12 @@
-training
+training/0no/*
+training/1yes/*
+training/2notSure/*
+validate/0no/*
+validate/1yes/*
+validate/2notSure/*
+archiveAudio
 .ipynb_checkpoints
 __pycache__
-hoot-46198.mp3
-seagull-14693.mp3
 *.mp3
 *.wav
+*.txt

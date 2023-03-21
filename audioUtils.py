@@ -25,11 +25,17 @@ color_pal = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 color_cycle = cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
 class Config:
 
-    def __init__(self, size = 10000, sr = 22050, split = True, normalize = False):
+    def __init__(self, size = 10000, sr = 22050, split = True, normalize = False, db = False):
+        #length of the array of sampled audio
         self.size = size
+        #sampling rate
         self.sr = sr
+        #remove anything below 20 db
         self.split = split
+        # norm?
         self.normalize = normalize
+        #decibel
+        self.db = db
 
 
 def cut_audio(audio, step = 10000, split = True):
@@ -62,19 +68,31 @@ def preprocessAudio(filePath, config = Config(), db = False):
     if config.normalize:
       audio_piece = (audio_piece - np.mean(audio_piece)) / np.std(audio_piece)
     melspect = librosa.feature.melspectrogram(y = audio_piece)
-    if db:
+    if config.db:
         melspect = librosa.amplitude_to_db(melspect, ref=np.max)
     list_matrices.append(melspect)
   return list_matrices
 
+def preprocessSingleAudio(filePath, config = Config(), db = False):
+  list_matrices = []
+  audio_piece,sr = librosa.load(filePath,sr=config.sr)
+  if config.normalize:
+    audio_piece = (audio_piece - np.mean(audio_piece)) / np.std(audio_piece)
+  melspect = librosa.feature.melspectrogram(y = audio_piece)
+  if config.db:
+      melspect = librosa.amplitude_to_db(melspect, ref=np.max)
+  list_matrices.append(melspect)
+  return list_matrices
 
-def initBinaryModel(showplot = False, size = 10000, sr = 22050):
+
+
+def initBinaryModel(showplot = False, size = 10000, sr = 22050, epoch = 10):
   # all tracks will be the X features and classification will be the target y
   all_tracks = []
   classification = []
 
   # assign directory
-  directory = 'training'
+  directory = 'training/'
   
   # iterate over files in
   # that directory
@@ -83,8 +101,8 @@ def initBinaryModel(showplot = False, size = 10000, sr = 22050):
 
   configs = [Config(size = size, sr = sr, split = False, normalize=False), Config(size = size, sr = sr, normalize=False)]
   i = 0
-  for foldername in os.listdir(directory):
-    folder_path = os.path.join(directory, foldername)
+  for foldername in ["0no", "1yes"]:
+    folder_path = directory+ foldername
     print(folder_path)
     # checking if it is a file
     #  if os.path.isfile(f):
@@ -99,7 +117,7 @@ def initBinaryModel(showplot = False, size = 10000, sr = 22050):
                       title='Norm Audio Example',
                     color=color_pal[0])
           plt.show()
-        audio_piece = preprocessAudio(file_path, config = configs[i])
+        audio_piece = preprocessSingleAudio(file_path, config = configs[i])
         # for i in audio_piece:
         #    plot(i)
         all_tracks += audio_piece
@@ -147,7 +165,7 @@ def initBinaryModel(showplot = False, size = 10000, sr = 22050):
 
 
 
-
+  model.summary()
 
 
   model.compile(loss='binary_crossentropy',
@@ -155,8 +173,8 @@ def initBinaryModel(showplot = False, size = 10000, sr = 22050):
                 metrics=['accuracy'])
   # X_train = X_train.reshape(1, 128, 196, 1)
 
-  history = model.fit(X_train, y_train, epochs=10, validation_data=(X_val, y_val))
-  model.summary()
+  history = model.fit(X_train, y_train, epochs=epoch, validation_data=(X_val, y_val))
+
   return model
 
 
@@ -178,23 +196,26 @@ def preprocessInputData(input, config = Config()):
 
 
 if __name__ == '__main__':
+  # i have tested some configs, and the size needs to be at least 9000 based on testing for it to fit into the model. 
+  # For the sampling rate(sr), i recommend having he same sr for training and input.
   size = 10000
   sr = 22050
   model = initBinaryModel(size = size, sr = sr)
-  file_path = "hoot-46198.mp3"
   config = Config(size = size, sr = sr, split = False, normalize = False)
-  input = preprocessInputData(file_path, config = config)
 
-  print("inputed ",file_path , ", size: " , input.shape)
-  print("Using config: ", config.__dict__)
 
-  test = model.predict(input)
+  file_paths = [  "hoot-46198.mp3","seagull-14693.mp3", "DariusTest.mp3"]
+  for file_path in file_paths:
+    input = preprocessInputData(file_path, config = config)
 
-  input, calls = resultofOutput(test)
-  print(input)
-  print("len of arrary:",len(input))
-  print("# calls: ", calls)
+    print("inputed ",file_path , ", size: " , input.shape)
+    print("Using config: ", config.__dict__)
 
-  
+    test = model.predict(input)
+
+    input, calls = resultofOutput(test)
+    print(input)
+    print("len of arrary:",len(input))
+    print("# calls: ", calls)
 
   tf.keras.backend.clear_session()

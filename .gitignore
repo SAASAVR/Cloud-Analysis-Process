@@ -1,9 +1,4 @@
-training/0no/*
-training/1yes/*
-training/2notSure/*
-validate/0no/*
-validate/1yes/*
-validate/2notSure/*
+dataset/
 archiveAudio
 .ipynb_checkpoints
 __pycache__

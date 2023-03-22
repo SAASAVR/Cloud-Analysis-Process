@@ -19,7 +19,7 @@ import tensorflow as tf
 
 from tensorflow.keras import datasets, layers, models
 import matplotlib.pyplot as plt
-
+DATAPATH= "dataset/"
 sns.set(style="white", palette=None)
 color_pal = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 color_cycle = cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
@@ -45,9 +45,10 @@ def cut_audio(audio, step = 10000, split = True):
     y_split = librosa.effects.split(audio, top_db=20)
     for i in y_split:
       segment = audio[i[0]:i[1]]
-      for j in range(0, (len(segment)-step), step):
-
-        audio_pieces.append(segment[j:j+step])
+      for j in range(0, len(segment), step):
+        temp = segment[j:j+step]
+        temp = librosa.util.fix_length(temp, size=step)
+        audio_pieces.append(temp)
   else:
     start = 0
     end = len(audio)
@@ -92,7 +93,7 @@ def initBinaryModel(showplot = False, size = 10000, sr = 22050, epoch = 10):
   classification = []
 
   # assign directory
-  directory = 'training/'
+  Train_DIR = DATAPATH+ 'training/'
   
   # iterate over files in
   # that directory
@@ -102,7 +103,7 @@ def initBinaryModel(showplot = False, size = 10000, sr = 22050, epoch = 10):
   configs = [Config(size = size, sr = sr, split = False, normalize=False), Config(size = size, sr = sr, normalize=False)]
   i = 0
   for foldername in ["0no", "1yes"]:
-    folder_path = directory+ foldername
+    folder_path = Train_DIR+ foldername
     print(folder_path)
     # checking if it is a file
     #  if os.path.isfile(f):
@@ -186,26 +187,78 @@ def resultofOutput(input):
   return input, calls
 
 def preprocessInputData(input, config = Config()):
-  input = preprocessAudio(file_path, config = config)
+  input = preprocessAudio(input, config = config)
       
   input = np.array(input)
   input = np.reshape(input, (input.shape[0], input.shape[1],input.shape[2], 1))
+
   return input
 
+def preprocessSingleInputData(input, config = Config()):
+  input = preprocessSingleAudio(input, config = config)
+      
+  input = np.array(input)
+  input = np.reshape(input, (input.shape[0], input.shape[1],input.shape[2], 1))
+
+  return input
+def Stats (pred_labels, true_labels):
+  
+  # True Positive (TP): we predict a label of 1 (positive), and the true label is 1.
+  TP = np.sum(np.logical_and(pred_labels == 1, true_labels == 1))
+  
+  # True Negative (TN): we predict a label of 0 (negative), and the true label is 0.
+  TN = np.sum(np.logical_and(pred_labels == 0, true_labels == 0))
+  
+  # False Positive (FP): we predict a label of 1 (positive), but the true label is 0.
+  FP = np.sum(np.logical_and(pred_labels == 1, true_labels == 0))
+  
+  # False Negative (FN): we predict a label of 0 (negative), but the true label is 1.
+  FN = np.sum(np.logical_and(pred_labels == 0, true_labels == 1))
+  
+  print ('TP: %i, FP: %i, TN: %i, FN: %i' % (TP,FP,TN,FN))
+  print('Accuracy: ', str((TP+TN)/(TP+TN+FP+FN)*100), "%" )
 
 
 
-if __name__ == '__main__':
-  # i have tested some configs, and the size needs to be at least 9000 based on testing for it to fit into the model. 
-  # For the sampling rate(sr), i recommend having he same sr for training and input.
-  size = 10000
-  sr = 22050
-  model = initBinaryModel(size = size, sr = sr)
-  config = Config(size = size, sr = sr, split = False, normalize = False)
+def validateData(model, Config):
+  VALID_PATH = DATAPATH + "validate/"
 
 
-  file_paths = [  "hoot-46198.mp3","seagull-14693.mp3", "DariusTest.mp3"]
-  for file_path in file_paths:
+
+  nameIndex = []
+
+
+  configs = [Config(size = size, sr = sr, split = False, normalize=False), Config(size = size, sr = sr, normalize=False)]
+  i = 0
+  classification = []
+  output = []
+  for foldername in ["0no", "1yes"]:
+    
+    folder_path = VALID_PATH+ foldername
+    print(folder_path)
+    # checking if it is a file
+    #  if os.path.isfile(f):
+    nameIndex.append(foldername)
+    print("Using config: ", configs[0].__dict__)
+    for file in os.listdir(folder_path):
+      file_path = os.path.join(folder_path, file)
+      print(file_path)
+      audio_piece = preprocessSingleInputData(file_path, config = configs[0])
+
+      out = model.predict(audio_piece)
+      output.append(out)
+      classification += ([i]*len(audio_piece))
+
+    i += 1
+  output, calls = resultofOutput(output)
+  print("output  ",output)
+  print("expected", classification)
+  print("len of arrary:",len(output))
+  Stats(np.array(output), np.array(classification))
+
+  # model.predict()
+
+def predictFromFile(file_path, model, Config):
     input = preprocessInputData(file_path, config = config)
 
     print("inputed ",file_path , ", size: " , input.shape)
@@ -217,5 +270,31 @@ if __name__ == '__main__':
     print(input)
     print("len of arrary:",len(input))
     print("# calls: ", calls)
+
+
+if __name__ == '__main__':
+  # i have tested some configs, and the size needs to be at least 9000 based on testing for it to fit into the model. 
+  # For the sampling rate(sr), i recommend having he same sr for training and input.
+  size = 10000
+  sr = 22050
+  model = initBinaryModel(size = size, sr = sr)
+  # model = []
+  config = Config(size = size, sr = sr, split = False, normalize = False)
+  validateData(model, Config)
+  print("\n\n")
+  predictFromFile("seagull-14693.mp3", model, config)
+  # file_paths = [  "hoot-46198.mp3","seagull-14693.mp3", "DariusTest.mp3"]
+  # for file_path in file_paths:
+  #   input = preprocessInputData(file_path, config = config)
+
+  #   print("inputed ",file_path , ", size: " , input.shape)
+  #   print("Using config: ", config.__dict__)
+
+  #   test = model.predict(input)
+
+  #   input, calls = resultofOutput(test)
+  #   print(input)
+  #   print("len of arrary:",len(input))
+  #   print("# calls: ", calls)
 
   tf.keras.backend.clear_session()

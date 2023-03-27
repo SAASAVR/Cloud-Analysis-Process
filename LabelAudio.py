@@ -67,7 +67,7 @@ def LabelAudio(folderDir, split):
         # Plot the sound file
         for i in y_split:
             sd.play(i, 22050,blocking=True)
-            newfile = fileName.replace(".mp3", "_" + ('s' if split else '') + str(index) + ".wav")
+            newfile = fileName.replace(".wav", "_" + ('s' if split else '') + str(index) + ".wav")
             index = index + 1
             clearTerminal()
             print("playing ", newfile)

@@ -4,15 +4,17 @@
 # play sound for user
 # sort the data with 0, 1, or something else if confused
 import os
-from rich import print
-import librosa
-import sounddevice as sd
-import numpy as np
-import matplotlib.pyplot as plt
-import audioUtils as utils
-import soundfile as sf
-
 import shutil
+
+import librosa
+import matplotlib.pyplot as plt
+import numpy as np
+import sounddevice as sd
+import soundfile as sf
+from rich import print
+
+import audioUtils as utils
+
 DATADIR = "dataset/"
 TRAINING_DIR = DATADIR+ "training/"
 VALIDATE_DIR = DATADIR+ "validate/"

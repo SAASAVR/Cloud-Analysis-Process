@@ -1,49 +1,13 @@
-import pymongo
-from flask import Flask, Response, request
-import base64
-import json
+import IPython.display as ipd
 import librosa
 import librosa.display
-import IPython.display as ipd
+import pymongo
+from flask import Flask, Response, request
+
+from audioUtils import *
+from mongoDBUtil import *
 
 # import audioUtils
-with open('mongodbKey', 'r') as file:
-    MONGO_URL = file.read()
-dbClient = pymongo.MongoClient(MONGO_URL)
-def queryAudio(id):
-    
-    mydb = dbClient["mydatabase"]
-    #collection
-    mycol = mydb["AudiosTest"]
-
-    myquery = { "ID": id}
-
-    # mydoc = mycol.find(myquery)
-
-    # for x in mydoc:
-    #     print(x) 
-    mydoc = mycol.find_one(myquery)
-    # print(mydoc['fileBytes'])
-    import io
-    y, sr = librosa.load(io.BytesIO(mydoc['fileBytes']), sr=None)
-    import sounddevice as sd
-    sd.play(y, sr)
-    sd.wait()
-    return mydoc
-
-def insertAudio(id, wavfile):
-    
-    mydb = dbClient["mydatabase"]
-    #collection
-    mycol = mydb["AudiosTest"]
-    
-    f = open(wavfile, "rb")
-    y= f.read()
-    myInsert = { "ID": id, "fileBytes" : y}
-
-    mydoc = mycol.insert_one(myInsert)
-
-
 
 
 app = Flask(__name__)
@@ -61,8 +25,28 @@ def MAINROUTE():
 
 
 if __name__ =='__main__':
+    size = 10000
+    sr = 22050
+    ID = "test4"
     # print("hello world")
     # app.run(debug = True, host = '0.0.0.0')
-    queryAudio("test4")
+
+    ### queryTestAudio
+    doc = queryAudio(ID)
+    print(doc['MLData'])
+
+
+    ### queryAudioThrouhgML
+    # model = initBinaryModel(size = size, sr = sr)
+    # # model = []
+    # config = Config(size = size, sr = sr, split = False, normalize = False)
+    # input = queryAudio(ID)
+    # y, sr = librosa.load(io.BytesIO(input['fileBytes']), sr=None)
+    # output, calls = predictFromArrayList(y, model, config)
+    # newVal = {"MLData":{"output" :output, "Calls": calls}}
+    # updateAudio(ID, newVal)
+
+
+    ### InsertAudio via wav file
     # insertAudio("test4", "sampleaudio.wav")
 

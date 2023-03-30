@@ -33,7 +33,8 @@ class Config:
         #decibel
         self.db = db
 
-"""cut_audio cuts a float array list based on the number of steps. Split determines to first filter the list by removing 20db from the list"""
+"""cut_audio cuts a float array list based on the number of steps. 
+Split determines to first filter the list by removing 20db from the list"""
 def cut_audio(audio, step = 10000, split = True):
   audio_pieces = []
   # audio = np.array(librosa.effects.trim(audio, top_db=20))
@@ -55,7 +56,8 @@ def cut_audio(audio, step = 10000, split = True):
   
 
 
-"""preprocessAudio takes a float numpy array list to be preprocessed, this is simple numpy manipulations. returns a list of audio cut numpy arrays if single is False, otherwise gives you a list size 1"""
+"""preprocessAudio takes a float numpy array list to be preprocessed, this is simple 
+numpy manipulations. returns a list of audio cut numpy arrays if single is False, otherwise gives you a list size 1"""
 def preprocessAudio(inputArray, config = Config(), db = False, single = True):
   list_matrices = []
   audio_pieces = []
@@ -72,7 +74,8 @@ def preprocessAudio(inputArray, config = Config(), db = False, single = True):
         melspect = librosa.amplitude_to_db(melspect, ref=np.max)
     list_matrices.append(melspect)
   return list_matrices
-"""preproceses a float numpy array to the required shape to be processed through ML. returns numpy array size of the model dimensions * nnumber of clips within audio"""
+"""preproceses a float numpy array to the required shape to be processed through ML. 
+returns numpy array size of the model dimensions * nnumber of clips within audio"""
 def preprocessInputData(input, config = Config(), single= True):
 
   input = preprocessAudio(input, config = config, single = single)
@@ -84,7 +87,8 @@ def preprocessInputData(input, config = Config(), single= True):
   return input
 
 
-"""InitBinary model creates a classifications between 2 folders. the required clips has to be the requested lengths. for size 10000, sr 22050, each clip is about .5 sec"""
+"""InitBinary model creates a classifications between 2 folders. 
+the required clips has to be the requested lengths. for size 10000, sr 22050, each clip is about .5 sec"""
 def initBinaryModel(showplot = False, size = 10000, sr = 22050, epoch = 10):
   # all tracks will be the X features and classification will be the target y
   all_tracks = []
@@ -176,7 +180,8 @@ def initBinaryModel(showplot = False, size = 10000, sr = 22050, epoch = 10):
 
   return model
 
-""" cormates the output based on 1s and 0s, otheriwse if its true or not true. it also gives number of times the call has been triggered"""
+""" cormates the output based on 1s and 0s, otheriwse if its true or not true.
+ it also gives number of times the call has been triggered"""
 def resultofOutput(input):
   input = [1 if prediction > 0.9 else 0 for prediction in input]
   from itertools import groupby

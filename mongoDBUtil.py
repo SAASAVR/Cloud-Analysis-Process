@@ -1,7 +1,6 @@
 import io
 from glob import glob
 
-import IPython.display as ipd
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
@@ -15,31 +14,25 @@ with open('mongodbKey', 'r') as file:
 dbClient = pymongo.MongoClient(MONGO_URL)
 DATABASE_NAME = "mydatabase"
 COLLECTION_NAME = "AudiosTest"
-def binaryData2numpy(input):
-    out, sr = librosa.load(io.BytesIO(input), sr=None)
-    return out
+"""This is the query audio when user selects one of the audio links"""
 def queryAudio(id):
     mycol = dbClient[DATABASE_NAME][COLLECTION_NAME]
     myquery = { "ID": id}
     mydoc = mycol.find_one(myquery)
     return mydoc
-def playNumpy(numpy_array):
+"""you might need this if you would like to listen to it"""
+"""Takes in numpy float array of librosa, plays sound"""
+def playNumpy(numpy_array, sr):
     import sounddevice as sd
     sd.play(numpy_array, sr)
     sd.wait()
 
+"""Convert the 'Bytefile to a numpy float"""
+def binaryData2numpy(input):
+    out, sr = librosa.load(io.BytesIO(input), sr=None)
+    return out
 
-
-def insertAudio(id, wavfile):
-    mycol = dbClient[DATABASE_NAME][COLLECTION_NAME]
-
-    
-    f = open(wavfile, "rb")
-    y= f.read()
-    myInsert = { "ID": id, "fileBytes" : y}
-
-    mycol.insert_one(myInsert)
-
+"""changes the numpy array to a mel spectrum image in binary"""
 def generateMelSpecBinaryImage(np_array):
     # np_array, sr = librosa.load("hoot-46198.mp3", sr=22050)
     S = librosa.feature.melspectrogram(y=np_array,
@@ -47,9 +40,7 @@ def generateMelSpecBinaryImage(np_array):
                                   n_mels=128 * 2,)
 
     S_db_mel = librosa.amplitude_to_db(S, ref=np.max)
-    print(S_db_mel.shape)
     spectrumList = S_db_mel.tolist()
-    print(spectrumList[:3])
     fig, ax = plt.subplots(figsize=(10, 5))
     # Plot the mel spectogram
     img = librosa.display.specshow(S_db_mel,
@@ -64,8 +55,15 @@ def generateMelSpecBinaryImage(np_array):
     data = buf.getvalue()
     buf.close()
     return data
-
-
+"""Initial insert of audio to database, contains ID, the audio data in binary, sampling rate(sr), an image of mel spectrum"""
+def insertAudio(id, wavfile, sr, size = 10000):
+    mycol = dbClient[DATABASE_NAME][COLLECTION_NAME]
+    f = open(wavfile, "rb")
+    y= f.read()
+    binaryImg = generateMelSpecBinaryImage(binaryData2numpy(y))
+    myInsert = {"ID": id, "fileBytes" : y, "AudioData":{'sr': sr, 'Size':size, 'clipLength': size/sr, 'MelSpectrumImgBytes': binaryImg}, "MLData":{}}
+    mycol.insert_one(myInsert)
+"""leads binary image to numpy or 2D format"""
 def loadMelSpecBinary2Image(binaryImg):
     from PIL import Image
 
@@ -83,42 +81,51 @@ def updateAudio(id, newVal):
     # Using update_one() method for single
     # updation.
     mycol.update_one(filter, newvalues)
-
+"""query the list of audios by unique ID"""
 def listAudio():
     mycol = dbClient[DATABASE_NAME][COLLECTION_NAME]
     return mycol.distinct("ID")
+"""generates ID for it to be send to db and for querying"""
 def generateID():
     from datetime import datetime
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     print(timestamp)
     return timestamp
+"""loads the binary image to an actual redable html image"""
+def image2HtmlSrc(binaryBuffer):
+    img_str = base64.b64encode(binaryBuffer).decode('utf-8')
+    img_str = "data:image/png;base64, " + img_str
+    return img_str
 if __name__ =='__main__':
     size = 10000
     sr = 22050
-    ID = "test4"
-    # generateID()
-    # print(listAudio())
+    # ID = "2023-03-31_121144"
+    ID = generateID()
+    # # print(listAudio())
 
 
-    ### queryTestAudio
-    doc = queryAudio(ID)
-    print(doc['MLData'])
-    audioNumpy = binaryData2numpy(doc['fileBytes'])
-    Img = loadMelSpecBinary2Image(doc['AudioData']['MelSpectrumImgBytes'])
-    Img.show()
+    # ### queryTestAudio
+    # doc = queryAudio(ID)
+    # audioNumpy = binaryData2numpy(doc['fileBytes'])
+    # # Img = loadMelSpecBinary2Image(doc['AudioData']['MelSpectrumImgBytes'])
+    # import base64
+    # # buffer = doc['AudioData']['MelSpectrumImgBytes']
+    
+    # # Img.show()
 
-    # playNumpy(audioNumpy)
+    # # playNumpy(audioNumpy)
 
     
-    # #generate Image Mel Spec
+    # # #generate Image Mel Spec
     # binaryImg = generateMelSpecBinaryImage(audioNumpy)
 
-    # ##  updateAudio
-    # newVal = {"MLData":{'output': [0, 1, 1, 1, 1, 1], 'Calls': 1}, "AudioData":{'sr': sr, 'Size':size, 'clipLength': size/sr, 'MelSpectrumImgBytes': binaryImg}}
+    # # ##  updateAudio
+    # # newVal = {"AudioData":{'sr': sr, 'Size':size, 'clipLength': size/sr, 'MelSpectrumImgBytes': binaryImg}}
+    # newVal = {"MLData":{}}
     # updateAudio(ID, newVal)
 
-
-    ### InsertAudio via wav file
-    # insertAudio(ID, "sampleaudio.wav")
+    file = "dataset/training/0no/fidgetToy_s2.wav"
+    ## InsertAudio via wav file
+    insertAudio(ID, file, sr, size)
 

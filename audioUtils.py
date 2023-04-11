@@ -14,7 +14,8 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import datasets, layers, models
 from tensorflow.keras.optimizers import RMSprop
-
+from playsound import playsound
+ 
 DATAPATH= "dataset/"
 sns.set(style="white", palette=None)
 color_pal = plt.rcParams["axes.prop_cycle"].by_key()["color"]
@@ -243,6 +244,9 @@ def validateData(model, config):
 """ pridicts from a file call"""
 def predictFromFile(file_path, model, config):
     y ,sr = librosa.load(file_path,sr=config.sr)
+    import sounddevice as sd
+    sd.play(y, sr)
+    sd.wait()
     print("inputed ",file_path , ", size: " , y.shape)
     print("Using config: ", config.__dict__)
     input = preprocessInputData(y, config = config, single = False)
@@ -270,14 +274,17 @@ def predictFromArrayList(inputArray, model, config):
 if __name__ == '__main__':
   # i have tested some configs, and the size needs to be at least 9000 based on testing for it to fit into the model. 
   # For the sampling rate(sr), i recommend having he same sr for training and input.
-  size = 10000
-  sr = 22050
-  model = initBinaryModel(size = size, sr = sr)
-  # model = []
-  config = Config(size = size, sr = sr, split = False, normalize = False)
-  validateData(model, config)
-  print("\n\n")
-  predictFromFile("seagull-14693.mp3", model, config)
+  # size = 10000
+  # sr = 22050
+  
+  # model = initBinaryModel(size = size, sr = sr)
+  # # model = []
+  # config = Config(size = size, sr = sr, split = False, normalize = False)
+  # validateData(model, config)
+  # print("\n\n")
+  # predictFromFile("400Hz-600Hz-800Hz.wav", model, config)
+
+
   # file_paths = [  "hoot-46198.mp3","seagull-14693.mp3", "DariusTest.mp3"]
   # for file_path in file_paths:
   #   input = preprocessInputData(file_path, config = config)

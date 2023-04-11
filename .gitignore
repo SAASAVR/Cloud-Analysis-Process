@@ -2,7 +2,8 @@ dataset/
 archiveAudio
 .ipynb_checkpoints
 __pycache__
-*.mp3
+hoot-46198.mp3
+seagull-14693.mp3
 *.wav
 *.txt
 mongodbKey
